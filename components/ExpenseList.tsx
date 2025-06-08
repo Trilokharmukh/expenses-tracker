@@ -23,13 +23,13 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
   const { deleteExpense, categories } = useExpenses();
 
   const getCategoryColor = (categoryName: string): string => {
-    const category = categories.find(cat => cat.name === categoryName);
+    const category = categories.find((cat) => cat.name === categoryName);
     return category?.color || '#6B7280'; // Default gray if category not found
   };
 
   // Group expenses by date
   const groupedExpenses: { [date: string]: Expense[] } = {};
-  expenses.forEach(expense => {
+  expenses.forEach((expense) => {
     const dateKey = expense.date.split('T')[0]; // Get YYYY-MM-DD
     if (!groupedExpenses[dateKey]) {
       groupedExpenses[dateKey] = [];
@@ -51,17 +51,17 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
   };
 
   const renderExpenseItem = ({ item }: { item: Expense }) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={styles.expenseItem}
       onPress={() => onExpensePress && onExpensePress(item)}
     >
       <View style={styles.expenseContent}>
         <View style={styles.expenseLeft}>
-          <View 
+          <View
             style={[
-              styles.categoryIndicator, 
-              { backgroundColor: getCategoryColor(item.category) }
-            ]} 
+              styles.categoryIndicator,
+              { backgroundColor: getCategoryColor(item.category) },
+            ]}
           />
           <View style={styles.expenseDetails}>
             <Text style={styles.expenseDescription}>{item.description}</Text>
@@ -70,7 +70,7 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
         </View>
         <View style={styles.expenseRight}>
           <Text style={styles.expenseAmount}>₹{item.amount.toFixed(2)}</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.deleteButton}
             onPress={() => handleDelete(item.id)}
           >
@@ -81,13 +81,17 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
     </TouchableOpacity>
   );
 
-  const renderDateGroup = ({ item }: { item: typeof groupedExpensesArray[0] }) => (
+  const renderDateGroup = ({
+    item,
+  }: {
+    item: (typeof groupedExpensesArray)[0];
+  }) => (
     <View style={styles.dateGroup}>
       <View style={styles.dateHeader}>
         <Text style={styles.dateText}>{formatDate(item.date)}</Text>
         <Text style={styles.dateTotalText}>₹{item.totalForDay.toFixed(2)}</Text>
       </View>
-      {item.expenses.map(expense => (
+      {item.expenses.map((expense) => (
         <React.Fragment key={expense.id}>
           {renderExpenseItem({ item: expense })}
         </React.Fragment>
@@ -101,7 +105,7 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
         <FlatList
           data={groupedExpensesArray}
           renderItem={renderDateGroup}
-          keyExtractor={item => item.date}
+          keyExtractor={(item) => item.date}
           showsVerticalScrollIndicator={false}
         />
       ) : (

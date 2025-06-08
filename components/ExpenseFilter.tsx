@@ -367,7 +367,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#06B6D4',
   },
   filterButtonText: {
-    color: '#fff',
+    color: '#333fff',
     fontSize: 16,
     fontWeight: '600',
   },

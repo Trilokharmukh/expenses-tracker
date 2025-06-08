@@ -199,13 +199,13 @@ export default function ReportsScreen() {
         />
       </View>
 
-      <View style={styles.expensesListContainer}>
-        <View style={styles.sectionHeader}>
+      {/* <View style={styles.expensesListContainer}> */}
+      {/* <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Monthly Transactions</Text>
-        </View>
+        </View> */}
 
-        <ExpenseFilter />
-      </View>
+      {/* <ExpenseFilter /> */}
+      {/* </View> */}
     </>
   );
 

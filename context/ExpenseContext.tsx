@@ -9,9 +9,11 @@ import {
   getCategories,
   DEFAULT_CATEGORIES,
 } from '../utils/storage';
+import { Alert } from 'react-native';
 
 // Configure axios base URL
-axios.defaults.baseURL = 'http://localhost:5000';
+
+axios.defaults.baseURL = 'https://expenses-tracker-km9q.onrender.com';
 
 interface ExpenseContextType {
   expenses: Expense[];
@@ -94,33 +96,32 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const checkInternetConnection = async () => {
+    const netInfo = await NetInfo.fetch();
+    if (!netInfo.isConnected) {
+      Alert.alert(
+        'No Internet Connection',
+        'Please check your internet connection and try again.'
+      );
+      return false;
+    }
+    return true;
+  };
+
   const addExpense = async (expense: Omit<Expense, 'id' | 'isSynced'>) => {
-    const newExpense: Expense = {
-      ...expense,
-      id: Date.now().toString(),
-      isSynced: false,
-    };
+    const isConnected = await checkInternetConnection();
+    if (!isConnected) return;
 
-    const updatedExpenses = [...expenses, newExpense];
-    await saveExpenses(updatedExpenses);
-
-    if (isOnline && user && token) {
-      try {
-        const response = await axios.post('/api/expenses', {
-          ...expense,
-          userId: user.id,
-        });
-
-        // Update local expense with server data
-        const syncedExpenses = updatedExpenses.map((e) =>
-          e.id === newExpense.id
-            ? { ...e, id: response.data._id, isSynced: true }
-            : e
-        );
-        await saveExpenses(syncedExpenses);
-      } catch (error) {
-        console.error('Error syncing expense:', error);
-      }
+    try {
+      const response = await axios.post('/api/expenses', {
+        ...expense,
+        userId: user.id,
+      });
+      const newExpense = response.data;
+      setExpenses((prev) => [...prev, newExpense]);
+    } catch (error) {
+      console.error('Error adding expense:', error);
+      throw error;
     }
   };
 

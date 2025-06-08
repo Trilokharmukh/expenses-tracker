@@ -7,6 +7,7 @@ import {
   RefreshControl,
   SafeAreaView,
   FlatList,
+  ScrollView,
 } from 'react-native';
 import { useExpenses } from '../../context/ExpenseContext';
 import ExpenseSummaryCard from '../../components/ExpenseSummaryCard';
@@ -14,11 +15,18 @@ import ExpenseList from '../../components/ExpenseList';
 import ExpenseFilter from '../../components/ExpenseFilter';
 import { getExpenseSummary } from '../../utils/expenses';
 import { getCurrentMonthDates, getMonthName } from '../../utils/date';
+import { formatCurrency } from '../../utils/format';
+import { getExpensesInDateRange } from '../../utils/expenses';
 
 export default function DashboardScreen() {
   const { expenses, filterOptions, filterExpenses } = useExpenses();
   const [refreshing, setRefreshing] = useState(false);
   const [filteredExpenses, setFilteredExpenses] = useState(expenses);
+  const { startDate, endDate } = getCurrentMonthDates();
+  const monthlyExpenses = getExpensesInDateRange(expenses, {
+    startDate,
+    endDate,
+  });
 
   // Get current month name and year
   const currentDate = new Date();
@@ -30,6 +38,11 @@ export default function DashboardScreen() {
   const weeklySummary = getExpenseSummary(expenses, 'week');
   const monthlySummary = getExpenseSummary(expenses, 'month');
   const yearlySummary = getExpenseSummary(expenses, 'year');
+
+  const totalExpenses = monthlyExpenses.reduce(
+    (sum, expense) => sum + expense.amount,
+    0
+  );
 
   useEffect(() => {
     // Apply filters whenever expenses or filter options change
@@ -71,19 +84,19 @@ export default function DashboardScreen() {
         <View style={styles.statCard}>
           <Text style={styles.statTitle}>Today</Text>
           <Text style={styles.statValue}>
-            ₹{dailySummary.totalAmount.toFixed(2)}
+            {formatCurrency(dailySummary.totalAmount.toFixed(2))}
           </Text>
         </View>
         <View style={styles.statCard}>
           <Text style={styles.statTitle}>This Week</Text>
           <Text style={styles.statValue}>
-            ₹{weeklySummary.totalAmount.toFixed(2)}
+            {formatCurrency(weeklySummary.totalAmount.toFixed(2))}
           </Text>
         </View>
-        <View style={styles.statCard}>
+        <View style={styles.statCardYear}>
           <Text style={styles.statTitle}>This Year</Text>
           <Text style={styles.statValue}>
-            ₹{yearlySummary.totalAmount.toFixed(2)}
+            {formatCurrency(yearlySummary.totalAmount.toFixed(2))}
           </Text>
         </View>
       </View>
@@ -132,6 +145,42 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f9fa',
   },
+  header: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  summaryCard: {
+    backgroundColor: '#fff',
+    margin: 16,
+    padding: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  summaryTitle: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 8,
+  },
+  summaryAmount: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  summarySubtitle: {
+    fontSize: 14,
+    color: '#666',
+  },
   content: {
     flex: 1,
     padding: 16,
@@ -169,12 +218,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 24,
+    flexWrap: 'wrap',
   },
   statCard: {
     backgroundColor: '#fff',
     borderRadius: 16,
     padding: 16,
-    width: '31%',
+    width: '47%',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  statCardYear: {
+    marginTop: 24,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    width: '100%',
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -188,7 +251,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   statValue: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700',
     color: '#333',
   },

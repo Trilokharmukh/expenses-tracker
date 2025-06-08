@@ -2,50 +2,32 @@ import React, { useState } from 'react';
 import {
   View,
   TextInput,
-  StyleSheet,
   TouchableOpacity,
   Text,
-  Platform,
-  KeyboardAvoidingView,
-  ScrollView,
+  StyleSheet,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { useExpenses } from '../context/ExpenseContext';
-import { Category } from '../types';
+import { router } from 'expo-router';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import CategorySelector from './CategorySelector';
-import {
-  CirclePlus as PlusCircle,
-  ArrowLeft,
-  Calendar,
-} from 'lucide-react-native';
-import { useRouter } from 'expo-router';
+import { ArrowLeft, Calendar, PlusCircle } from 'lucide-react-native';
 
-type ExpenseFormProps = {
+interface ExpenseFormProps {
   onSuccess?: () => void;
-};
+}
 
-const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSuccess }) => {
-  const router = useRouter();
-  const { categories, addExpense } = useExpenses();
-
+export default function ExpenseForm({ onSuccess }: ExpenseFormProps) {
+  const { addExpense, categories } = useExpenses();
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(
-    null
-  );
+  const [selectedCategory, setSelectedCategory] = useState(categories[0]);
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
-
-  const handleCategorySelect = (category: Category) => {
-    setSelectedCategory(category);
-  };
-
-  const handleDateChange = (event: any, selectedDate?: Date) => {
-    const currentDate = selectedDate || date;
-    setShowDatePicker(Platform.OS === 'ios');
-    setDate(currentDate);
-  };
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async () => {
     if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
@@ -54,6 +36,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSuccess }) => {
     }
 
     try {
+      setIsLoading(true);
       await addExpense({
         amount: parseFloat(amount),
         category: selectedCategory?.name || 'Other',
@@ -64,17 +47,16 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSuccess }) => {
       // Reset form
       setAmount('');
       setDescription('');
-      setSelectedCategory(null);
+      setSelectedCategory(categories[0]);
       setDate(new Date());
 
       if (onSuccess) {
         onSuccess();
       }
-
-      Alert.alert('Success', 'Expense added successfully');
     } catch (error) {
-      console.error('Error adding expense:', error);
       Alert.alert('Error', 'Failed to add expense. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -103,17 +85,22 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSuccess }) => {
               placeholder="0.00"
               keyboardType="numeric"
               value={amount}
-              onChangeText={setAmount}
+              onChangeText={(text) => {
+                // Only allow numbers and decimal point
+                const numericValue = text.replace(/[^0-9.]/g, '');
+                setAmount(numericValue);
+              }}
+              editable={!isLoading}
             />
           </View>
         </View>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Category (Optional)</Text>
+          <Text style={styles.label}>Category</Text>
           <CategorySelector
             categories={categories}
             selectedCategory={selectedCategory}
-            onSelectCategory={handleCategorySelect}
+            onSelectCategory={setSelectedCategory}
           />
         </View>
 
@@ -125,6 +112,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSuccess }) => {
             value={description}
             onChangeText={setDescription}
             multiline
+            editable={!isLoading}
           />
         </View>
 
@@ -133,6 +121,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSuccess }) => {
           <TouchableOpacity
             style={styles.dateButton}
             onPress={() => setShowDatePicker(true)}
+            disabled={isLoading}
           >
             <Calendar size={20} color="#666" style={styles.dateIcon} />
             <Text style={styles.dateButtonText}>
@@ -144,20 +133,31 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSuccess }) => {
               value={date}
               mode="date"
               display="default"
-              onChange={handleDateChange}
+              onChange={(event, selectedDate) => {
+                setShowDatePicker(false);
+                if (selectedDate) {
+                  setDate(selectedDate);
+                }
+              }}
               maximumDate={new Date()}
             />
           )}
         </View>
 
-        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+        <TouchableOpacity
+          style={[styles.submitButton, isLoading && styles.buttonDisabled]}
+          onPress={handleSubmit}
+          disabled={isLoading}
+        >
           <PlusCircle size={20} color="#fff" style={styles.buttonIcon} />
-          <Text style={styles.submitButtonText}>Add Expense</Text>
+          <Text style={styles.submitButtonText}>
+            {isLoading ? 'Adding...' : 'Add Expense'}
+          </Text>
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -240,6 +240,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
   },
+  buttonDisabled: {
+    opacity: 0.7,
+  },
   submitButtonText: {
     color: '#fff',
     fontSize: 18,
@@ -249,5 +252,3 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
 });
-
-export default ExpenseForm;

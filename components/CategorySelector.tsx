@@ -7,7 +7,16 @@ import {
   ScrollView,
 } from 'react-native';
 import { Category } from '../types';
-import { ShoppingBag, Car, Chrome as Home, Tv, Heart, Zap, MoveHorizontal as MoreHorizontal, Utensils } from 'lucide-react-native';
+import {
+  ShoppingBag,
+  Car,
+  Chrome as Home,
+  Tv,
+  Heart,
+  Zap,
+  MoveHorizontal as MoreHorizontal,
+  Utensils,
+} from 'lucide-react-native';
 
 type CategorySelectorProps = {
   categories: Category[];
@@ -42,8 +51,9 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
   onSelectCategory,
 }) => {
   // Ensure we have unique categories by filtering out any duplicates based on ID
-  const uniqueCategories = categories.filter((category, index, self) =>
-    index === self.findIndex((c) => c.id === category.id)
+  const uniqueCategories = categories.filter(
+    (category, index, self) =>
+      index === self.findIndex((c) => c.id === category.id)
   );
 
   return (
@@ -60,12 +70,21 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
             { backgroundColor: category.color },
             selectedCategory?.id === category.id && styles.selectedCategory,
           ]}
+          activeOpacity={1}
           onPress={() => onSelectCategory(category)}
         >
           <View style={styles.iconContainer}>
             {getCategoryIcon(category.icon)}
           </View>
-          <Text style={styles.categoryText}>{category.name}</Text>
+          <Text
+            style={[
+              styles.categoryText,
+              selectedCategory?.id === category.id &&
+                styles.selectedCategoryText,
+            ]}
+          >
+            {category.name}
+          </Text>
         </TouchableOpacity>
       ))}
     </ScrollView>
@@ -85,10 +104,10 @@ const styles = StyleSheet.create({
     minWidth: 90,
   },
   selectedCategory: {
-    transform: [{ scale: 1.05 }],
+    transform: [{ scale: 1.12 }],
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
+    // shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 4,
   },
@@ -99,6 +118,10 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
     fontSize: 14,
+  },
+  selectedCategoryText: {
+    color: '#fff',
+    fontWeight: '600',
   },
 });
 

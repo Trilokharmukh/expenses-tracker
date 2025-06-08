@@ -5,9 +5,10 @@ import React, { useEffect } from 'react';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { View, ActivityIndicator } from 'react-native';
 import { Slot } from 'expo-router';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 function ProtectedRoute() {
-  const { user, loading } = useAuth(); // Use loading from AuthContext
+  const { user, loading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
@@ -40,9 +41,11 @@ export default function RootLayout() {
   useFrameworkReady();
 
   return (
-    <AuthProvider>
-      <StatusBar style="auto" />
-      <ProtectedRoute />
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <StatusBar style="auto" />
+        <ProtectedRoute />
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }

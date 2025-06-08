@@ -9,9 +9,11 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { router } from 'expo-router';
+// import { Google } from 'lucide-react-native';
 
 interface ValidationErrors {
   email?: string;
@@ -22,7 +24,8 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<ValidationErrors>({});
-  const { login } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const { login, loginWithGoogle } = useAuth();
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -52,6 +55,7 @@ export default function LoginScreen() {
     }
 
     try {
+      setIsLoading(true);
       await login(email, password);
       router.replace('/(tabs)');
     } catch (error: any) {
@@ -59,6 +63,23 @@ export default function LoginScreen() {
         'Error',
         error.response?.data?.message || 'An error occurred during login'
       );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      setIsLoading(true);
+      await loginWithGoogle();
+      router.replace('/(tabs)');
+    } catch (error: any) {
+      Alert.alert(
+        'Error',
+        error.response?.data?.message || 'An error occurred during Google login'
+      );
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -90,6 +111,7 @@ export default function LoginScreen() {
             }}
             keyboardType="email-address"
             autoCapitalize="none"
+            editable={!isLoading}
           />
           {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
 
@@ -104,20 +126,50 @@ export default function LoginScreen() {
               }
             }}
             secureTextEntry
+            editable={!isLoading}
           />
           {errors.password && (
             <Text style={styles.errorText}>{errors.password}</Text>
           )}
 
-          <TouchableOpacity style={styles.button} onPress={handleLogin}>
-            <Text style={styles.buttonText}>Login</Text>
+          <TouchableOpacity
+            style={[styles.button, isLoading && styles.buttonDisabled]}
+            onPress={handleLogin}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Login</Text>
+            )}
           </TouchableOpacity>
+          {/* 
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>OR</Text>
+            <View style={styles.dividerLine} />
+          </View> */}
 
-          <TouchableOpacity onPress={() => router.push('/register')}>
+          {/* <TouchableOpacity
+            style={[styles.googleButton, isLoading && styles.buttonDisabled]}
+            onPress={handleGoogleLogin}
+            disabled={isLoading}
+          >
+            <Google size={20} color="#fff" style={styles.googleIcon} />
+            <Text style={styles.googleButtonText}>Continue with Google</Text>
+          </TouchableOpacity> */}
+
+          <TouchableOpacity
+            onPress={() => router.push('/register')}
+            disabled={isLoading}
+          >
             <Text style={styles.link}>Don't have an account? Register</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => router.push('/reset-password')}>
+          <TouchableOpacity
+            onPress={() => router.push('/reset-password')}
+            disabled={isLoading}
+          >
             <Text style={styles.link}>Forgot Password?</Text>
           </TouchableOpacity>
         </View>
@@ -168,7 +220,41 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginTop: 10,
   },
+  buttonDisabled: {
+    opacity: 0.7,
+  },
   buttonText: {
+    color: '#fff',
+    textAlign: 'center',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#ddd',
+  },
+  dividerText: {
+    marginHorizontal: 10,
+    color: '#666',
+  },
+  googleButton: {
+    backgroundColor: '#4285F4',
+    padding: 15,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  googleIcon: {
+    marginRight: 10,
+  },
+  googleButtonText: {
     color: '#fff',
     textAlign: 'center',
     fontWeight: 'bold',

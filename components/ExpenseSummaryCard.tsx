@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { ExpenseSummary, TimeFrame } from '../types';
+import { formatCurrency } from '../utils/format';
 
 type ExpenseSummaryCardProps = {
   summary: ExpenseSummary;
@@ -19,7 +20,9 @@ const ExpenseSummaryCard: React.FC<ExpenseSummaryCardProps> = ({
   return (
     <View style={styles.card}>
       <Text style={styles.cardTitle}>{title}</Text>
-      <Text style={styles.amountText}>₹{summary.totalAmount.toFixed(2)}</Text>
+      <Text style={styles.amountText}>
+        {formatCurrency(summary.totalAmount.toFixed(2))}
+      </Text>
 
       {topCategories.length > 0 ? (
         <View style={styles.categoriesContainer}>
@@ -27,7 +30,9 @@ const ExpenseSummaryCard: React.FC<ExpenseSummaryCardProps> = ({
           {topCategories.map(([category, amount]) => (
             <View key={category} style={styles.categoryRow}>
               <Text style={styles.categoryName}>{category}</Text>
-              <Text style={styles.categoryAmount}>₹{amount.toFixed(2)}</Text>
+              <Text style={styles.categoryAmount}>
+                {formatCurrency(amount.toFixed(2))}
+              </Text>
             </View>
           ))}
         </View>
