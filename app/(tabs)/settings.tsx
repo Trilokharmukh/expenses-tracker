@@ -13,6 +13,7 @@ import {
   Modal,
 } from 'react-native';
 import { useExpenses } from '../../context/ExpenseContext';
+import { useAuth } from '../../context/AuthContext';
 import {
   Moon,
   Sun,
@@ -30,9 +31,11 @@ import {
   restoreFromBackup,
   deleteBackup,
 } from '../../utils/backup';
+import { router } from 'expo-router';
 
 export default function SettingsScreen() {
   const { expenses, categories } = useExpenses();
+  const { logout } = useAuth();
   const [darkMode, setDarkMode] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [isBackingUp, setIsBackingUp] = useState(false);
@@ -144,6 +147,15 @@ export default function SettingsScreen() {
       .replace('expense-tracker-backup-', '')
       .replace('.json', '');
     return new Date(dateStr).toLocaleDateString();
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.replace('/login');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to log out. Please try again.');
+    }
   };
 
   return (
@@ -267,6 +279,11 @@ export default function SettingsScreen() {
             <Text style={styles.appVersion}>Version 1.0.0</Text>
           </View>
         </ScrollView>
+
+        {/* Sign Out Button */}
+        <TouchableOpacity style={styles.signOutButton} onPress={handleLogout}>
+          <Text style={styles.signOutButtonText}>Sign Out</Text>
+        </TouchableOpacity>
 
         {/* Backups Modal */}
         <Modal
@@ -487,5 +504,18 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
+  },
+  signOutButton: {
+    backgroundColor: '#ff3b30',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 16,
+    marginBottom: 24,
+  },
+  signOutButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

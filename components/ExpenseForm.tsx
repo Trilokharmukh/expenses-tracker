@@ -14,7 +14,11 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useExpenses } from '../context/ExpenseContext';
 import { Category } from '../types';
 import CategorySelector from './CategorySelector';
-import { CirclePlus as PlusCircle, ArrowLeft, Calendar } from 'lucide-react-native';
+import {
+  CirclePlus as PlusCircle,
+  ArrowLeft,
+  Calendar,
+} from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 
 type ExpenseFormProps = {
@@ -27,7 +31,9 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSuccess }) => {
 
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(
+    null
+  );
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
 
@@ -79,7 +85,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSuccess }) => {
     >
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
           >

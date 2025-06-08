@@ -1,18 +1,51 @@
-export type Expense = {
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+}
+
+export interface Expense {
   id: string;
   amount: number;
   category: string;
+  date: string;
   description: string;
-  date: string; // ISO string format
-  createdAt: string; // ISO string format
-};
+  userId?: string;
+  isSynced?: boolean;
+}
 
-export type Category = {
+export interface Category {
   id: string;
   name: string;
   color: string;
   icon: string;
-};
+}
+
+export interface ExpenseFilterOptions {
+  searchQuery?: string;
+  startDate?: Date;
+  endDate?: Date;
+  categories?: string[];
+  dateRange?: {
+    startDate: string;
+    endDate: string;
+  };
+  minAmount?: number;
+  maxAmount?: number;
+}
+
+export interface ValidationErrors {
+  name?: string;
+  email?: string;
+  password?: string;
+  confirmPassword?: string;
+}
+
+export interface AuthRequest extends Request {
+  user?: {
+    userId: string;
+  };
+}
 
 export type TimeFrame = 'day' | 'week' | 'month' | 'year';
 
@@ -27,12 +60,4 @@ export type ExpenseSummary = {
 export type DateRangeFilter = {
   startDate: string;
   endDate: string;
-};
-
-export type ExpenseFilterOptions = {
-  categories?: string[];
-  dateRange?: DateRangeFilter;
-  minAmount?: number;
-  maxAmount?: number;
-  searchQuery?: string;
 };

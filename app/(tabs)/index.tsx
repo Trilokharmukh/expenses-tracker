@@ -16,7 +16,7 @@ import { getExpenseSummary } from '../../utils/expenses';
 import { getCurrentMonthDates, getMonthName } from '../../utils/date';
 
 export default function DashboardScreen() {
-  const { expenses, isLoading, filterOptions, filterExpenses } = useExpenses();
+  const { expenses, filterOptions, filterExpenses } = useExpenses();
   const [refreshing, setRefreshing] = useState(false);
   const [filteredExpenses, setFilteredExpenses] = useState(expenses);
 
@@ -33,7 +33,8 @@ export default function DashboardScreen() {
 
   useEffect(() => {
     // Apply filters whenever expenses or filter options change
-    setFilteredExpenses(filterExpenses(filterOptions));
+    const filtered = filterExpenses(filterOptions);
+    setFilteredExpenses(filtered);
   }, [expenses, filterOptions, filterExpenses]);
 
   const onRefresh = async () => {

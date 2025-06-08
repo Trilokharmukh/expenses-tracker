@@ -7,8 +7,22 @@ import {
   Settings,
 } from 'lucide-react-native';
 import { ExpenseProvider } from '../../context/ExpenseContext';
+import { useAuth } from '../../context/AuthContext';
+import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { router } from 'expo-router';
 
 export default function TabLayout() {
+  const { logout } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.replace('/login');
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
+  };
+
   return (
     <ExpenseProvider>
       <Tabs
@@ -29,6 +43,14 @@ export default function TabLayout() {
             fontSize: 12,
             fontWeight: '500',
           },
+          headerRight: () => (
+            <TouchableOpacity
+              style={styles.logoutButton}
+              onPress={handleLogout}
+            >
+              <Text style={styles.logoutText}>Logout</Text>
+            </TouchableOpacity>
+          ),
         }}
       >
         <Tabs.Screen
@@ -69,3 +91,15 @@ export default function TabLayout() {
     </ExpenseProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  logoutButton: {
+    marginRight: 15,
+    padding: 8,
+  },
+  logoutText: {
+    color: '#ff3b30',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});

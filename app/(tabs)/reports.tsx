@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Platform,
   Alert,
   FlatList,
+  ScrollView,
 } from 'react-native';
 import { useExpenses } from '../../context/ExpenseContext';
 import ExpenseChart from '../../components/ExpenseChart';
@@ -30,20 +31,24 @@ import {
   ArrowLeft,
   ArrowRight,
 } from 'lucide-react-native';
+import { Expense } from '../../types/expense';
+import { formatCurrency } from '../../utils/format';
 
 export default function ReportsScreen() {
   const { expenses, categories, filterOptions, filterExpenses } = useExpenses();
-  const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [selectedMonth, setSelectedMonth] = useState<string>(
+    new Date().toISOString().slice(0, 7) // Format: YYYY-MM
+  );
   const [filteredExpenses, setFilteredExpenses] = useState(expenses);
   const [isExporting, setIsExporting] = useState(false);
 
   // Get month data
-  const currentMonthName = getMonthName(selectedMonth.getMonth());
-  const currentYear = selectedMonth.getFullYear();
+  const currentMonthName = getMonthName(new Date(selectedMonth).getMonth());
+  const currentYear = new Date(selectedMonth).getFullYear();
 
   // Get date range for the selected month
-  const firstDay = getFirstDayOfMonth(selectedMonth);
-  const lastDay = getLastDayOfMonth(selectedMonth);
+  const firstDay = getFirstDayOfMonth(new Date(selectedMonth));
+  const lastDay = getLastDayOfMonth(new Date(selectedMonth));
   const monthDateRange = {
     startDate: firstDay.toISOString(),
     endDate: lastDay.toISOString(),
@@ -68,8 +73,8 @@ export default function ReportsScreen() {
   const handlePreviousMonth = () => {
     setSelectedMonth((prev) => {
       const newDate = new Date(prev);
-      newDate.setMonth(prev.getMonth() - 1);
-      return newDate;
+      newDate.setMonth(new Date(prev).getMonth() - 1);
+      return newDate.toISOString().slice(0, 7);
     });
   };
 
@@ -77,16 +82,16 @@ export default function ReportsScreen() {
     const now = new Date();
     // Don't allow selecting future months
     if (
-      selectedMonth.getMonth() === now.getMonth() &&
-      selectedMonth.getFullYear() === now.getFullYear()
+      new Date(selectedMonth).getMonth() === now.getMonth() &&
+      new Date(selectedMonth).getFullYear() === now.getFullYear()
     ) {
       return;
     }
 
     setSelectedMonth((prev) => {
       const newDate = new Date(prev);
-      newDate.setMonth(prev.getMonth() + 1);
-      return newDate;
+      newDate.setMonth(new Date(prev).getMonth() + 1);
+      return newDate.toISOString().slice(0, 7);
     });
   };
 
@@ -101,6 +106,57 @@ export default function ReportsScreen() {
       setIsExporting(false);
     }
   };
+
+  const monthlyData = useMemo(() => {
+    const monthlyTotals: { [key: string]: number } = {};
+    const monthlyExpenses: { [key: string]: Expense[] } = {};
+
+    expenses.forEach((expense) => {
+      const date = new Date(expense.date);
+      const monthYear = date.toISOString().slice(0, 7); // Format: YYYY-MM
+
+      monthlyTotals[monthYear] =
+        (monthlyTotals[monthYear] || 0) + expense.amount;
+      monthlyExpenses[monthYear] = [
+        ...(monthlyExpenses[monthYear] || []),
+        expense,
+      ];
+    });
+
+    return Object.entries(monthlyTotals)
+      .sort(([a], [b]) => b.localeCompare(a))
+      .map(([monthYear, total]) => ({
+        monthYear,
+        total,
+        expenses: monthlyExpenses[monthYear] || [],
+      }));
+  }, [expenses]);
+
+  const selectedMonthData = useMemo(() => {
+    return (
+      monthlyData.find((data) => data.monthYear === selectedMonth) || {
+        monthYear: selectedMonth,
+        total: 0,
+        expenses: [],
+      }
+    );
+  }, [monthlyData, selectedMonth]);
+
+  const categoryData = useMemo(() => {
+    const categoryTotals: { [key: string]: number } = {};
+
+    selectedMonthData.expenses.forEach((expense) => {
+      categoryTotals[expense.category] =
+        (categoryTotals[expense.category] || 0) + expense.amount;
+    });
+
+    return Object.entries(categoryTotals)
+      .sort(([, a], [, b]) => b - a)
+      .map(([category, total]) => ({
+        category,
+        total,
+      }));
+  }, [selectedMonthData]);
 
   const renderHeader = () => (
     <>

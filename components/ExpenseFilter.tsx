@@ -15,49 +15,63 @@ import { Category, ExpenseFilterOptions } from '../types';
 import { X, Filter, Calendar, Search, Check } from 'lucide-react-native';
 import { formatDate } from '../utils/date';
 
+// interface ExpenseFilterOptions {
+//   dateRange: any;
+//   searchQuery?: string;
+//   startDate?: Date;
+//   endDate?: Date;
+//   categories?: string[];
+// }
+
 const ExpenseFilter: React.FC = () => {
-  const { categories, filterOptions, setFilterOptions, clearFilters } = useExpenses();
-  
-  const [isVisible, setIsVisible] = useState(false);
-  const [tempFilters, setTempFilters] = useState<ExpenseFilterOptions>(filterOptions);
+  const {
+    categories,
+    filterOptions,
+    setFilterOptions,
+    clearFilters,
+  } = useExpenses();
+
+  const [showFilter, setShowFilter] = useState(false);
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
-  const [searchQuery, setSearchQuery] = useState(filterOptions.searchQuery || '');
+  const [tempFilters, setTempFilters] = useState<ExpenseFilterOptions>({
+    searchQuery: filterOptions.searchQuery || '',
+    startDate: filterOptions.startDate,
+    endDate: filterOptions.endDate,
+    categories: filterOptions.categories || [],
+  });
 
-  const openFilter = () => {
-    setTempFilters(filterOptions);
-    setIsVisible(true);
-  };
-
-  const closeFilter = () => {
-    setIsVisible(false);
-  };
-
-  const applyFilters = () => {
-    // If search query exists, update the temp filters
-    if (searchQuery) {
-      setTempFilters(prev => ({ ...prev, searchQuery }));
-    }
-    
+  const handleApplyFilters = () => {
     setFilterOptions(tempFilters);
-    setIsVisible(false);
+    setShowFilter(false);
+  };
+
+  const handleClearFilters = () => {
+    clearFilters();
+    setTempFilters({
+      searchQuery: '',
+      startDate: undefined,
+      endDate: undefined,
+      categories: [],
+    });
+    setShowFilter(false);
   };
 
   const handleCategoryToggle = (categoryName: string) => {
-    setTempFilters(prev => {
+    setTempFilters((prev) => {
       const currentCategories = prev.categories || [];
-      
+
       if (currentCategories.includes(categoryName)) {
         // Remove category
         return {
           ...prev,
-          categories: currentCategories.filter(cat => cat !== categoryName)
+          categories: currentCategories.filter((cat) => cat !== categoryName),
         };
       } else {
         // Add category
         return {
           ...prev,
-          categories: [...currentCategories, categoryName]
+          categories: [...currentCategories, categoryName],
         };
       }
     });
@@ -65,9 +79,9 @@ const ExpenseFilter: React.FC = () => {
 
   const handleStartDateChange = (event: any, selectedDate?: Date) => {
     setShowStartDatePicker(Platform.OS === 'ios');
-    
+
     if (selectedDate) {
-      setTempFilters(prev => ({
+      setTempFilters((prev) => ({
         ...prev,
         dateRange: {
           startDate: selectedDate.toISOString(),
@@ -79,9 +93,9 @@ const ExpenseFilter: React.FC = () => {
 
   const handleEndDateChange = (event: any, selectedDate?: Date) => {
     setShowEndDatePicker(Platform.OS === 'ios');
-    
+
     if (selectedDate) {
-      setTempFilters(prev => ({
+      setTempFilters((prev) => ({
         ...prev,
         dateRange: {
           startDate: prev.dateRange?.startDate || new Date().toISOString(),
@@ -91,20 +105,8 @@ const ExpenseFilter: React.FC = () => {
     }
   };
 
-  const handleClearFilters = () => {
-    clearFilters();
-    setTempFilters({});
-    setSearchQuery('');
-  };
-
   const handleSearchChange = (text: string) => {
-    setSearchQuery(text);
-    if (!text) {
-      // If search is cleared, update the filter options
-      setFilterOptions(prev => ({ ...prev, searchQuery: undefined }));
-    } else {
-      setFilterOptions(prev => ({ ...prev, searchQuery: text }));
-    }
+    setTempFilters((prev) => ({ ...prev, searchQuery: text }));
   };
 
   // Check if any filters are active
@@ -126,14 +128,17 @@ const ExpenseFilter: React.FC = () => {
           <TextInput
             style={styles.searchInput}
             placeholder="Search expenses..."
-            value={searchQuery}
+            value={tempFilters.searchQuery}
             onChangeText={handleSearchChange}
           />
-          {searchQuery ? (
+          {tempFilters.searchQuery ? (
             <TouchableOpacity
               onPress={() => {
-                setSearchQuery('');
-                setFilterOptions(prev => ({ ...prev, searchQuery: undefined }));
+                setTempFilters((prev) => ({ ...prev, searchQuery: '' }));
+                setFilterOptions((prev) => ({
+                  ...prev,
+                  searchQuery: undefined,
+                }));
               }}
             >
               <X size={20} color="#999" />
@@ -143,42 +148,44 @@ const ExpenseFilter: React.FC = () => {
         <TouchableOpacity
           style={[
             styles.filterButton,
-            hasActiveFilters() && styles.filterButtonActive
+            hasActiveFilters() && styles.filterButtonActive,
           ]}
-          onPress={openFilter}
+          onPress={() => setShowFilter(true)}
         >
-          <Filter size={20} color={hasActiveFilters() ? "#fff" : "#333"} />
+          <Text style={styles.filterButtonText}>Filter</Text>
         </TouchableOpacity>
       </View>
 
       <Modal
-        visible={isVisible}
+        visible={showFilter}
         animationType="slide"
         transparent={true}
-        onRequestClose={closeFilter}
+        onRequestClose={() => setShowFilter(false)}
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Filter Expenses</Text>
-              <TouchableOpacity onPress={closeFilter}>
-                <X size={24} color="#333" />
+              <TouchableOpacity onPress={() => setShowFilter(false)}>
+                <X size={24} color="#000" />
               </TouchableOpacity>
             </View>
 
             <ScrollView style={styles.modalBody}>
               <Text style={styles.filterSectionTitle}>Categories</Text>
               <View style={styles.categoriesContainer}>
-                {categories.map(category => (
+                {categories.map((category) => (
                   <TouchableOpacity
                     key={category.id}
                     style={[
                       styles.categoryChip,
                       {
-                        backgroundColor: (tempFilters.categories || []).includes(category.name)
+                        backgroundColor: (
+                          tempFilters.categories || []
+                        ).includes(category.name)
                           ? category.color
-                          : '#f0f0f0'
-                      }
+                          : '#f0f0f0',
+                      },
                     ]}
                     onPress={() => handleCategoryToggle(category.name)}
                   >
@@ -186,10 +193,12 @@ const ExpenseFilter: React.FC = () => {
                       style={[
                         styles.categoryChipText,
                         {
-                          color: (tempFilters.categories || []).includes(category.name)
+                          color: (tempFilters.categories || []).includes(
+                            category.name
+                          )
                             ? '#fff'
-                            : '#333'
-                        }
+                            : '#333',
+                        },
                       ]}
                     >
                       {category.name}
@@ -308,7 +317,7 @@ const ExpenseFilter: React.FC = () => {
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.applyButton}
-                onPress={applyFilters}
+                onPress={handleApplyFilters}
               >
                 <Text style={styles.applyButtonText}>Apply Filters</Text>
               </TouchableOpacity>
@@ -356,6 +365,11 @@ const styles = StyleSheet.create({
   },
   filterButtonActive: {
     backgroundColor: '#06B6D4',
+  },
+  filterButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   modalContainer: {
     flex: 1,

@@ -1,21 +1,30 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo from '@react-native-community/netinfo';
+import axios from 'axios';
+import { useAuth } from './AuthContext';
 import { Expense, Category, ExpenseFilterOptions } from '../types';
-import { getExpenses, getCategories, DEFAULT_CATEGORIES } from '../utils/storage';
+import {
+  getExpenses,
+  getCategories,
+  DEFAULT_CATEGORIES,
+} from '../utils/storage';
 
-type ExpenseContextType = {
+// Configure axios base URL
+axios.defaults.baseURL = 'http://localhost:5000';
+
+interface ExpenseContextType {
   expenses: Expense[];
   categories: Category[];
-  isLoading: boolean;
-  addExpense: (expense: Omit<Expense, 'id' | 'createdAt'>) => Promise<void>;
-  updateExpense: (expense: Expense) => Promise<void>;
+  addExpense: (expense: Omit<Expense, 'id' | 'isSynced'>) => Promise<void>;
   deleteExpense: (id: string) => Promise<void>;
-  addCategory: (category: Omit<Category, 'id'>) => Promise<void>;
-  filterExpenses: (options: ExpenseFilterOptions) => Expense[];
-  clearFilters: () => void;
+  syncExpenses: () => Promise<void>;
+  isOnline: boolean;
   filterOptions: ExpenseFilterOptions;
   setFilterOptions: React.Dispatch<React.SetStateAction<ExpenseFilterOptions>>;
-};
+  clearFilters: () => void;
+  filterExpenses: (options: ExpenseFilterOptions) => Expense[];
+}
 
 const ExpenseContext = createContext<ExpenseContextType | undefined>(undefined);
 
@@ -23,167 +32,199 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
+  const [isOnline, setIsOnline] = useState(true);
   const [filterOptions, setFilterOptions] = useState<ExpenseFilterOptions>({});
+  const { user, token } = useAuth();
 
-  // Initialize data on mount
+  // Configure axios defaults
   useEffect(() => {
-    const initializeData = async () => {
-      try {
-        // Load expenses
-        const storedExpenses = await getExpenses();
-        setExpenses(storedExpenses);
+    if (token) {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    } else {
+      delete axios.defaults.headers.common['Authorization'];
+    }
+  }, [token]);
 
-        // Load or initialize categories
-        const storedCategories = await getCategories();
-        if (storedCategories.length === 0) {
-          await AsyncStorage.setItem(
-            'categories',
-            JSON.stringify(DEFAULT_CATEGORIES)
-          );
-          setCategories(DEFAULT_CATEGORIES);
-        } else {
-          setCategories(storedCategories);
-        }
-      } catch (error) {
-        console.error('Failed to initialize data', error);
-      } finally {
-        setIsLoading(false);
+  // Load expenses from AsyncStorage and sync with server
+  useEffect(() => {
+    if (user && token) {
+      loadAndSyncExpenses();
+    } else {
+      loadExpenses();
+    }
+  }, [user, token]);
+
+  // Monitor network status
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      setIsOnline(state.isConnected ?? false);
+      if (state.isConnected && user && token) {
+        syncExpenses();
       }
+    });
+
+    return () => unsubscribe();
+  }, [user, token]);
+
+  const loadExpenses = async () => {
+    try {
+      const storedExpenses = await getExpenses();
+      setExpenses(storedExpenses);
+    } catch (error) {
+      console.error('Error loading expenses:', error);
+    }
+  };
+
+  const loadAndSyncExpenses = async () => {
+    try {
+      await loadExpenses();
+      await syncExpenses();
+    } catch (error) {
+      console.error('Error loading and syncing expenses:', error);
+    }
+  };
+
+  const saveExpenses = async (updatedExpenses: Expense[]) => {
+    try {
+      await AsyncStorage.setItem('expenses', JSON.stringify(updatedExpenses));
+      setExpenses(updatedExpenses);
+    } catch (error) {
+      console.error('Error saving expenses:', error);
+    }
+  };
+
+  const addExpense = async (expense: Omit<Expense, 'id' | 'isSynced'>) => {
+    const newExpense: Expense = {
+      ...expense,
+      id: Date.now().toString(),
+      isSynced: false,
     };
 
-    initializeData();
-  }, []);
+    const updatedExpenses = [...expenses, newExpense];
+    await saveExpenses(updatedExpenses);
 
-  // Add a new expense
-  const addExpense = async (expenseData: Omit<Expense, 'id' | 'createdAt'>) => {
-    try {
-      const newExpense: Expense = {
-        ...expenseData,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-      };
+    if (isOnline && user && token) {
+      try {
+        const response = await axios.post('/api/expenses', {
+          ...expense,
+          userId: user.id,
+        });
 
-      const updatedExpenses = [...expenses, newExpense];
-      setExpenses(updatedExpenses);
-      await AsyncStorage.setItem('expenses', JSON.stringify(updatedExpenses));
-    } catch (error) {
-      console.error('Failed to add expense', error);
+        // Update local expense with server data
+        const syncedExpenses = updatedExpenses.map((e) =>
+          e.id === newExpense.id
+            ? { ...e, id: response.data._id, isSynced: true }
+            : e
+        );
+        await saveExpenses(syncedExpenses);
+      } catch (error) {
+        console.error('Error syncing expense:', error);
+      }
     }
   };
 
-  // Update an existing expense
-  const updateExpense = async (updatedExpense: Expense) => {
-    try {
-      const updatedExpenses = expenses.map((exp) =>
-        exp.id === updatedExpense.id ? updatedExpense : exp
-      );
-      setExpenses(updatedExpenses);
-      await AsyncStorage.setItem('expenses', JSON.stringify(updatedExpenses));
-    } catch (error) {
-      console.error('Failed to update expense', error);
-    }
-  };
-
-  // Delete an expense
   const deleteExpense = async (id: string) => {
-    try {
-      const updatedExpenses = expenses.filter((exp) => exp.id !== id);
-      setExpenses(updatedExpenses);
-      await AsyncStorage.setItem('expenses', JSON.stringify(updatedExpenses));
-    } catch (error) {
-      console.error('Failed to delete expense', error);
+    const updatedExpenses = expenses.filter((expense) => expense.id !== id);
+    await saveExpenses(updatedExpenses);
+
+    if (isOnline && user && token) {
+      try {
+        await axios.delete(`/api/expenses/${id}`);
+      } catch (error) {
+        console.error('Error deleting expense:', error);
+      }
     }
   };
 
-  // Add a new category
-  const addCategory = async (categoryData: Omit<Category, 'id'>) => {
-    try {
-      const newCategory: Category = {
-        ...categoryData,
-        id: Date.now().toString(),
-      };
+  const syncExpenses = async () => {
+    if (!isOnline || !user || !token) return;
 
-      const updatedCategories = [...categories, newCategory];
-      setCategories(updatedCategories);
-      await AsyncStorage.setItem('categories', JSON.stringify(updatedCategories));
+    try {
+      // Get all unsynced expenses
+      const unsyncedExpenses = expenses.filter((expense) => !expense.isSynced);
+
+      // Sync each unsynced expense
+      for (const expense of unsyncedExpenses) {
+        try {
+          const response = await axios.post('/api/expenses', {
+            ...expense,
+            userId: user.id,
+          });
+
+          // Update local expense with server data
+          const updatedExpenses = expenses.map((e) =>
+            e.id === expense.id
+              ? { ...e, id: response.data._id, isSynced: true }
+              : e
+          );
+          await saveExpenses(updatedExpenses);
+        } catch (error) {
+          console.error('Error syncing expense:', error);
+        }
+      }
+
+      // Fetch latest expenses from server
+      const response = await axios.get('/api/expenses');
+      const serverExpenses = response.data.map((expense: any) => ({
+        ...expense,
+        id: expense._id,
+        isSynced: true,
+      }));
+
+      // Merge local and server expenses
+      const mergedExpenses = [...serverExpenses];
+      const localUnsynced = expenses.filter((e) => !e.isSynced);
+      mergedExpenses.push(...localUnsynced);
+
+      await saveExpenses(mergedExpenses);
     } catch (error) {
-      console.error('Failed to add category', error);
+      console.error('Error syncing expenses:', error);
     }
   };
 
-  // Filter expenses based on provided options
+  const clearFilters = () => {
+    setFilterOptions({});
+  };
+
   const filterExpenses = (options: ExpenseFilterOptions): Expense[] => {
     return expenses.filter((expense) => {
-      // Filter by categories
-      if (
-        options.categories &&
-        options.categories.length > 0 &&
-        !options.categories.includes(expense.category)
-      ) {
-        return false;
+      // Search query filter
+      if (options.searchQuery) {
+        const searchLower = options.searchQuery.toLowerCase();
+        const matchesSearch =
+          expense.description.toLowerCase().includes(searchLower) ||
+          expense.category.toLowerCase().includes(searchLower);
+        if (!matchesSearch) return false;
       }
 
-      // Filter by date range
-      if (
-        options.dateRange &&
-        (new Date(expense.date) < new Date(options.dateRange.startDate) ||
-          new Date(expense.date) > new Date(options.dateRange.endDate))
-      ) {
-        return false;
+      // Date range filter
+      if (options.startDate || options.endDate) {
+        const expenseDate = new Date(expense.date);
+        if (options.startDate && expenseDate < options.startDate) return false;
+        if (options.endDate && expenseDate > options.endDate) return false;
       }
 
-      // Filter by min amount
-      if (
-        options.minAmount !== undefined &&
-        expense.amount < options.minAmount
-      ) {
-        return false;
-      }
-
-      // Filter by max amount
-      if (
-        options.maxAmount !== undefined &&
-        expense.amount > options.maxAmount
-      ) {
-        return false;
-      }
-
-      // Filter by search query
-      if (
-        options.searchQuery &&
-        !expense.description
-          .toLowerCase()
-          .includes(options.searchQuery.toLowerCase()) &&
-        !expense.category
-          .toLowerCase()
-          .includes(options.searchQuery.toLowerCase())
-      ) {
-        return false;
+      // Categories filter
+      if (options.categories && options.categories.length > 0) {
+        if (!options.categories.includes(expense.category)) return false;
       }
 
       return true;
     });
   };
 
-  // Clear all filters
-  const clearFilters = () => {
-    setFilterOptions({});
-  };
-
   const value = {
     expenses,
     categories,
-    isLoading,
     addExpense,
-    updateExpense,
     deleteExpense,
-    addCategory,
-    filterExpenses,
-    clearFilters,
+    syncExpenses,
+    isOnline,
     filterOptions,
     setFilterOptions,
+    clearFilters,
+    filterExpenses,
   };
 
   return (
@@ -191,7 +232,6 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 };
 
-// Custom hook to use the Expense context
 export const useExpenses = () => {
   const context = useContext(ExpenseContext);
   if (context === undefined) {
