@@ -7,7 +7,9 @@
     "dev": "EXPO_NO_TELEMETRY=1 expo start",
     "build:web": "expo export --platform web",
     "lint": "expo lint",
-    "server": "ts-node --project server/tsconfig.json server/index.ts"
+    "server": "ts-node --project server/tsconfig.json server/index.ts",
+    "build": "cd server && tsc",
+    "start": "node server/dist/index.js"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",
