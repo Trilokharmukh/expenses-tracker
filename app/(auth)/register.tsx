@@ -111,6 +111,7 @@ export default function RegisterScreen() {
             style={getInputStyle('name')}
             placeholder="Name"
             value={name}
+            placeholderTextColor="#000"
             onChangeText={(text) => {
               setName(text);
               if (errors.name) {
@@ -124,6 +125,7 @@ export default function RegisterScreen() {
             style={getInputStyle('email')}
             placeholder="Email"
             value={email}
+            placeholderTextColor="#000"
             onChangeText={(text) => {
               setEmail(text);
               if (errors.email) {
@@ -139,6 +141,7 @@ export default function RegisterScreen() {
             style={getInputStyle('password')}
             placeholder="Password"
             value={password}
+            placeholderTextColor="#000"
             onChangeText={(text) => {
               setPassword(text);
               if (errors.password) {
@@ -155,6 +158,7 @@ export default function RegisterScreen() {
             style={getInputStyle('confirmPassword')}
             placeholder="Confirm Password"
             value={confirmPassword}
+            placeholderTextColor="#000"
             onChangeText={(text) => {
               setConfirmPassword(text);
               if (errors.confirmPassword) {

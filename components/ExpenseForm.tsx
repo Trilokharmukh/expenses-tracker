@@ -83,6 +83,7 @@ export default function ExpenseForm({ onSuccess }: ExpenseFormProps) {
             <TextInput
               style={styles.amountInput}
               placeholder="0.00"
+              placeholderTextColor="#000"
               keyboardType="numeric"
               value={amount}
               onChangeText={(text) => {
@@ -109,6 +110,7 @@ export default function ExpenseForm({ onSuccess }: ExpenseFormProps) {
           <TextInput
             style={styles.input}
             placeholder="What was this expense for?"
+            placeholderTextColor="#000"
             value={description}
             onChangeText={setDescription}
             multiline

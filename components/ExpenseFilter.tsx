@@ -128,6 +128,7 @@ const ExpenseFilter: React.FC = () => {
           <TextInput
             style={styles.searchInput}
             placeholder="Search expenses..."
+            placeholderTextColor="#000"
             value={tempFilters.searchQuery}
             onChangeText={handleSearchChange}
           />
@@ -272,6 +273,7 @@ const ExpenseFilter: React.FC = () => {
                   <TextInput
                     style={styles.amountInput}
                     placeholder="0"
+                    placeholderTextColor="#000"
                     keyboardType="numeric"
                     value={
                       tempFilters.minAmount !== undefined
@@ -291,6 +293,7 @@ const ExpenseFilter: React.FC = () => {
                   <TextInput
                     style={styles.amountInput}
                     placeholder="∞"
+                    placeholderTextColor="#000"
                     keyboardType="numeric"
                     value={
                       tempFilters.maxAmount !== undefined
